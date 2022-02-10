@@ -1,0 +1,8 @@
+{
+  "env": {
+    "PORT": 80,
+    "MONGO_URL": "mongodb://localhost:27017/Gambling",
+    "JWT_SECRET": "KeySecret",
+    "NODE_ENV": "development"
+  }
+}

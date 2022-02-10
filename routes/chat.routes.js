@@ -3,7 +3,7 @@ const router = Router()
 const { Server } = require("socket.io")
 const io = new Server()
 
-const Message = require('../models/message')
+const Message = require('../models/Message')
 
 // /chat/
 router.post('/', async (req, res) => {

@@ -1,13 +1,13 @@
 const { Router } = require('express')
 const router = Router()
 
-const User = require('../models/User')
+const ChatMessage = require('../models/ChatMessage')
 const Message = require('../models/Message')
 
 // /message/create
 router.post('/create', async (req, res) => {
   try {
-    const { text, day, sender } = req.body;
+    const { text, day, sender, time } = req.body;
     const thisDate = new Date()
 
     const botsMessage = {
@@ -15,12 +15,30 @@ router.post('/create', async (req, res) => {
       sender,
       text,
       status: false,
-      day
+      day,
+      time
     }
 
-    const message = new Message({ ...botsMessage })
+    const message = new Message({ ...botsMessage });
+    await message.save();
 
-    message.save()
+    // Если день отправки сообщений сегодня, то необходимо создать это сообщение в чате
+    const nowDayName = new Date().toLocaleDateString('en-EN', { weekday: 'long' });
+    if (nowDayName == day) {
+
+      let dateSend = new Date();
+      let part_time = time.split(':');
+      dateSend.setHours(part_time[0], part_time[1]);
+
+      const chatMessage = new ChatMessage({
+        sender,
+        text,
+        date: dateSend
+      });
+
+      await chatMessage.save();
+
+    }
 
     return res.status(200).json({
       ok: true,

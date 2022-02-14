@@ -1,41 +1,31 @@
-const bidPlayers = async (players) => {
-  const updateUser = []
+const bidPlayers = async (players, kef) => {
 
-  function addFactor(min, max) {
-    let randomFloor = min + Math.random() * (max + 1 - min)
-
-    return Math.floor(randomFloor)
+  function getRandom(min, max) {
+    return Math.random() * (max - min) + min;
   }
 
-  function addBid(min, max) {
-    let randomFactor = min + Math.random() * (max + 1 - min)
-    randomFactor = String(randomFactor).substr(0, 4)
-    const bid = Number(randomFactor)
+  const users = players.map(row => {
 
-    return Math.floor(bid)
-  }
+    let luck = row.luck / 100;
+    let random = Math.random();
 
-  players.forEach(el => {
-    const output = addFactor(2, 5)
-    const bid = addBid(0, 4)
-    
+    let winner = random < luck;
 
-    const user = {
-      id: el._id,
-      login: el.login,
-      currency: el.currency,
-      luck: el.luck,
-      amountMax: el.amountMax,
-      amountMin: el.amountMin,
-      output,
-      bid
+    let betKef;
+    (winner) ? betKef = (getRandom(1, kef-0.01)) : betKef = getRandom(kef+0.01, 20);
+
+    //console.log(`Bot: ${row.login} - ${betKef} - winner: ${winner} [ ${row.luck}% ]`);
+
+    return {
+      login: row.login,
+      currency: row.currency,
+      betAmount: getRandom(row.min, row.max),
+      betKef
     }
-
-    updateUser.push(user)
   })
 
 
-  return updateUser
+  return users
 }
 
 module.exports = bidPlayers

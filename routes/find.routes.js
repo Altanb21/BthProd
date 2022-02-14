@@ -3,7 +3,7 @@ const router = Router()
 
 const Message = require('../models/Message')
 const User = require('../models/User')
-const Setting = require('../models/Settings')
+const Setting = require('../models/settings')
 
 // /find/message
 router.post('/messages', async (req, res) => {
@@ -15,7 +15,7 @@ router.post('/messages', async (req, res) => {
 
     const arrMessages = messages.map(row => {
       let status = row.status ? 'Send' : 'No Send';
-      return [ row.sender, 'No send', row.text, status ]
+      return [ row.sender, row.time, row.text, status ]
     })
 
     return res.status(200).json({

@@ -1,7 +1,7 @@
 const { Router } = require('express')
 const router = Router()
 
-const Setting = require('../models/Settings');
+const Setting = require('../models/settings');
 
 // /setting/create
 router.post('/create', async (req, res) => {

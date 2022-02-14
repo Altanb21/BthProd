@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Server API for BitEthGambling Project",
   "main": "app.js",
+  "homepage": ".",
+  "proxy": "http://localhost:4200",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon app.js ",

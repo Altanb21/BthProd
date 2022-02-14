@@ -7,6 +7,8 @@ const { cronFunctions } = require('./cron/index');
 
 const app = express();
 
+app.use(express.static(__dirname));
+
 if (config.IS_PRODUCTION) {
   const serveStatic = require('serve-static');
   const history = require('connect-history-api-fallback');

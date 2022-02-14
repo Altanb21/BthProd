@@ -145,7 +145,7 @@ let timer;
 
 let results = [];
 
-async function gameStart(socket) {
+async function gameStart(io) {
 
   if (timer) {
     clearInterval(timer);
@@ -255,7 +255,7 @@ async function gameStart(socket) {
 
         data.players = players;
 
-        socket.emit('gameStep', data);
+        io.sockets.emit('gameStep', data);
 
       }
     }
@@ -296,6 +296,6 @@ io.on('connection', async (socket) => {
   const data = await getDataForNewConnection();
   socket.emit('connectionData', data);
 
-  await gameStart(socket);
+  await gameStart(io);
 
 });

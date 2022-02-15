@@ -33,7 +33,7 @@ router.post('/messages', async (req, res) => {
 })
 
 // /find/password
-router.get('/password', async (req, res) => {
+router.post('/password', async (req, res) => {
   try {
     const setting = await Setting.findOne({name: 'universalPassword'}, { data: 1 })
 
@@ -58,7 +58,7 @@ router.get('/password', async (req, res) => {
 })
 
 // /find/numbers
-router.get('/numbers', async (req, res) => {
+router.post('/numbers', async (req, res) => {
   try {
     const setting = await Setting.findOne({ name: 'Numbers' }, { data: 1 });
 

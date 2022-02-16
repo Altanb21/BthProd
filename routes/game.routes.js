@@ -28,7 +28,7 @@ router.post('/generation', async (req, res) => {
 })
 
 // /game/playerBots
-router.get('/playerBots', async (req, res) => {
+router.post('/playerBots', async (req, res) => {
   try {
     const date = new Date()
     const Hour = date.getHours()

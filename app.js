@@ -7,8 +7,6 @@ const { cronFunctions } = require('./cron/index');
 
 const app = express();
 
-app.use(express.static(__dirname));
-
 if (config.IS_PRODUCTION) {
   const serveStatic = require('serve-static');
   const history = require('connect-history-api-fallback');
@@ -93,13 +91,13 @@ const msg = require('./models/ChatMessage')
 const getBots = require('./vendor/getBots')
 const bidPlayers = require('./vendor/bidPlayers');
 const { clearInterval } = require('timers');
+const { text } = require('express');
 
 function generateNumber(min, max) {
   return Math.random() * (max - min) + min;
 }
 async function getMessages() {
-  let now = new Date();
-  const messages = await msg.find({ date: { $lte: now } }).sort({ date: 1 }).lean();
+  const messages = await msg.find().sort({ date: 1 }).lean();
   return messages;
 }
 
@@ -149,6 +147,35 @@ let timer;
 let results = [];
 
 async function gameStart(io) {
+  function setPlayers(profitStatus=false, betStatus=true) {
+    return infoPlayers.map(row => {
+
+      let userKef = '...';
+      let profit = '...';
+      let betAmount = Number(row.betAmount).toFixed(2);
+      let betText = `${betAmount} ${row.currency}`;
+
+      if (row.betKef <= currentValue) {
+        userKef = Number(row.betKef).toFixed(2);
+        profit = Number((userKef * betAmount) - betAmount).toFixed(2);
+      } else {
+        if (profitStatus) {
+          profit = -betAmount;
+          userKef = Number(row.betKef).toFixed(2);
+        }
+      }
+
+      let profitText = `${profit} ${row.currency}`;
+
+      if (!betStatus) {
+        betText = '?';
+        userKef = '...';
+        profitText = '...';
+      }
+
+      return [ row.login, userKef, betText, profitText ];
+    });
+  }
 
   if (timer) {
     clearInterval(timer);
@@ -162,7 +189,7 @@ async function gameStart(io) {
 
       if (!statusGame) {
 
-        kef = generateNumber(1, 20);
+        kef = generateNumber(1, 10);
         statusGame = 'Game';
         currentTimePause = 5000;
         currentTimeResults = 3000;
@@ -187,64 +214,50 @@ async function gameStart(io) {
           data = { value: currentValue, gameStatus: statusGame, count };
         }
 
-        players = infoPlayers.map(row => {
-
-          let userKef = '...';
-          let profit = '...';
-          let betAmount = Number(row.betAmount).toFixed(2);
-  
-          if (row.betKef <= currentValue) {
-            userKef = Number(row.betKef).toFixed(2);
-            profit = Number((userKef * betAmount) - betAmount).toFixed(2);
-          }
-  
-          return [ row.login, userKef, `${betAmount} ${row.currency}`, profit ];
-        });
+        players = setPlayers();
 
       } else if (statusGame == 'Results') {
 
-        players = infoPlayers.map(row => {
-
-          let userKef = Number(row.betKef).toFixed(2);
-          let profit = '...';
-          let betAmount = Number(row.betAmount).toFixed(2);
-
-          if (row.betKef <= currentValue) {
-            profit = Number((userKef * betAmount) - betAmount).toFixed(2);
-          } else {
-            profit = -betAmount;
-          }
-
-          return [ row.login, userKef, `${betAmount} ${row.currency}`, profit ];
-        })
-        
-
-        currentTimeResults -= updateTime;
+        players = setPlayers(true)
         if (currentTimeResults > 0) {
           data = { value: `Crashed @ ${Number(kef).toFixed(2)}`, gameStatus: statusGame };
+          if (currentTimeResults == 3000) {
+            results.push({ kef });
+            if (results.length > 8) results.shift();
+            data.results = results;
+          }
         } else {
           statusGame = 'Pause';
-          results.push({ kef });
-          if (results.length > 8) results.shift();
         }
 
-        data.results = results;
+        currentTimeResults -= updateTime;
 
       } else if (statusGame = 'Pause') {
         currentTimePause -= updateTime;
         if (currentTimePause > 0) {
           data = { value: currentTimePause, gameStatus: statusGame };
+          if (currentTimePause == 4500) {
+            players = setPlayers(false, false);
+          }
         } else {
           statusGame = null;
         }
-
-        players = [];
       }
 
       if (statusGame) {
 
         let nums = players.filter(row => row[1] !== '...');
         let texts = players.filter(row => row[1] === '...');
+
+        texts.sort((a, b) => {
+          let aa = Number(a[2].replace(/[^0-9,\.]/gi, ''));
+          let bb = Number(b[2].replace(/[^0-9,\.]/gi, ''));
+
+          if (aa > bb) return -1;
+          if (aa > bb) return 1;
+          return 0;
+
+        });
 
         nums.sort((a, b) => {
           let aa = Number(a[1]);
@@ -277,7 +290,7 @@ io.on('connection', async (socket) => {
   console.log(`[${dateLog}] - connection new user`)
 
   socket.on('getMessage', async () => {
-    const messages = await getMessages();
+    const messages = await msg.find().lean();
     socket.emit('getMessages', messages)
   });
 

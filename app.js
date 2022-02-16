@@ -135,8 +135,8 @@ let count = 0;
 
 let data = {};
 
-const stepGame = 1.01;
-const updateTime = 100;
+const stepGame = 1.006;
+const updateTime = 110;
 
 let players = [];
 let infoPlayers = [];
@@ -188,7 +188,7 @@ async function gameStart(io) {
 
       if (!statusGame) {
 
-        kef = generateNumber(1, 10);
+        kef = generateNumber(1, 2);
         statusGame = 'Game';
         currentTimePause = 5000;
         currentTimeResults = 3000;
@@ -208,7 +208,7 @@ async function gameStart(io) {
         count ++;
         if (currentValue >= kef) {
           statusGame = 'Results';
-          data = { value: currentValue, gameStatus: statusGame, count };
+          data = { value: `Crashed @ ${Number(kef).toFixed(2)}`, gameStatus: statusGame };
         } else {
           data = { value: currentValue, gameStatus: statusGame, count };
         }
@@ -233,7 +233,7 @@ async function gameStart(io) {
 
       } else if (statusGame = 'Pause') {
         currentTimePause -= updateTime;
-        if (currentTimePause > 0) {
+        if (currentTimePause >= 0) {
           data = { value: currentTimePause, gameStatus: statusGame };
           if (currentTimePause == 4500) {
             players = setPlayers(false, false);
@@ -297,8 +297,8 @@ io.on('connection', async (socket) => {
 
     const message = new msg({ ...msgs })
     await message.save()
-
     const messages = await getMessages();
+    
     io.sockets.emit('getMessages', messages)
   });
 

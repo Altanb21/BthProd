@@ -90,14 +90,13 @@ const io = require('socket.io')(server, { cors: { origin: '*' } })
 const msg = require('./models/ChatMessage')
 const getBots = require('./vendor/getBots')
 const bidPlayers = require('./vendor/bidPlayers');
-const { clearInterval } = require('timers');
-const { text } = require('express');
 
 function generateNumber(min, max) {
   return Math.random() * (max - min) + min;
 }
 async function getMessages() {
-  const messages = await msg.find().sort({ date: 1 }).lean();
+  let now = new Date();
+  const messages = await msg.find({ date: { $lte: now } }).sort({ date: 1 }).lean();
   return messages;
 }
 
@@ -290,7 +289,7 @@ io.on('connection', async (socket) => {
   console.log(`[${dateLog}] - connection new user`)
 
   socket.on('getMessage', async () => {
-    const messages = await msg.find().lean();
+    const messages = await getMessages();
     socket.emit('getMessages', messages)
   });
 

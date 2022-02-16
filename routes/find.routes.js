@@ -3,7 +3,7 @@ const router = Router()
 
 const Message = require('../models/Message')
 const User = require('../models/User')
-const Setting = require('../models/settings')
+const Setting = require('../models/Settings')
 
 // /find/message
 router.post('/messages', async (req, res) => {

@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.cff688ee.css",
-    "main.js": "/static/js/main.cbcc5acd.js",
+    "main.css": "/static/css/main.bc5e5d20.css",
+    "main.js": "/static/js/main.d9184191.js",
     "static/media/primeicons.svg": "/static/media/primeicons.c6e2053303524e39530c.svg",
     "static/media/Inter-Bold.woff": "/static/media/Inter-Bold.93c1301bd9f486c573b3.woff",
     "static/media/Inter-SemiBold.woff": "/static/media/Inter-SemiBold.cca62d21c8c555c392e5.woff",
@@ -17,11 +17,11 @@
     "static/media/primeicons.woff": "/static/media/primeicons.449aa8c65cdc5c2a8686.woff",
     "static/media/primeicons.ttf": "/static/media/primeicons.91bacab1f083f2795272.ttf",
     "index.html": "/index.html",
-    "main.cff688ee.css.map": "/static/css/main.cff688ee.css.map",
-    "main.cbcc5acd.js.map": "/static/js/main.cbcc5acd.js.map"
+    "main.bc5e5d20.css.map": "/static/css/main.bc5e5d20.css.map",
+    "main.d9184191.js.map": "/static/js/main.d9184191.js.map"
   },
   "entrypoints": [
-    "static/css/main.cff688ee.css",
-    "static/js/main.cbcc5acd.js"
+    "static/css/main.bc5e5d20.css",
+    "static/js/main.d9184191.js"
   ]
 }

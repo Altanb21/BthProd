@@ -103,7 +103,7 @@ async function getMessages() {
 async function getDataForNewConnection() {
   const messages = await getMessages();
 
-  return { messages, results };
+  return { messages, results, gameStatus: statusGame, curVal: currentValue, curCount: count, curPlayers: infoPlayers };
 }
 
 
@@ -129,14 +129,14 @@ async function getDataForNewConnection() {
 let statusGame = null;
 let kef = null;
 let currentValue = 1;
-let currentTimeResults = 3000;
-let currentTimePause = 5000
+let currentTimeResults = 5000;
+let currentTimePause = 2000
 let count = 0;
 
 let data = {};
 
-const stepGame = 1.006;
-const updateTime = 110;
+const stepGame = 1.01;
+const updateTime = 100;
 
 let players = [];
 let infoPlayers = [];
@@ -184,11 +184,12 @@ async function gameStart(io) {
 
   timer = setInterval(() => {
 
+
     async function getData() {
 
       if (!statusGame) {
 
-        kef = generateNumber(1, 2);
+        kef = generateNumber(1, 20);
         statusGame = 'Game';
         currentTimePause = 5000;
         currentTimeResults = 3000;
@@ -201,78 +202,54 @@ async function gameStart(io) {
 
         console.log(`New Game: ${kef}\n`);
 
+        data = { v: currentValue, s: statusGame, p: infoPlayers };
+
       } else if (statusGame == 'Game') {
 
         // Обновляем значение
         currentValue = currentValue * stepGame;
-        count ++;
+
         if (currentValue >= kef) {
+          
           statusGame = 'Results';
-          data = { value: `Crashed @ ${Number(kef).toFixed(2)}`, gameStatus: statusGame };
+
+          data = { v: kef, s: statusGame };
+
+          results.push({ kef });
+          if (results.length > 8) results.shift();
+
+          data.r = results;
         } else {
-          data = { value: currentValue, gameStatus: statusGame, count };
+
+          data = { v: currentValue };
         }
 
-        players = setPlayers();
+        count ++;
 
       } else if (statusGame == 'Results') {
 
-        players = setPlayers(true)
-        if (currentTimeResults > 0) {
-          data = { value: `Crashed @ ${Number(kef).toFixed(2)}`, gameStatus: statusGame };
-          if (currentTimeResults == 3000) {
-            results.push({ kef });
-            if (results.length > 8) results.shift();
-            data.results = results;
-          }
-        } else {
+        if (currentTimeResults == 0) {
           statusGame = 'Pause';
+          data = { v: currentTimePause, s: statusGame };
+        } else {
+          data = { v: currentTimeResults };
         }
 
         currentTimeResults -= updateTime;
 
       } else if (statusGame = 'Pause') {
+
         currentTimePause -= updateTime;
-        if (currentTimePause >= 0) {
-          data = { value: currentTimePause, gameStatus: statusGame };
-          if (currentTimePause == 4500) {
-            players = setPlayers(false, false);
-          }
-        } else {
+        if (currentTimePause == 0) {
           statusGame = null;
         }
+
+        data = { v: currentTimePause };
+
+        
       }
 
-      if (statusGame) {
-
-        let nums = players.filter(row => row[1] !== '...');
-        let texts = players.filter(row => row[1] === '...');
-
-        texts.sort((a, b) => {
-          let aa = Number(a[2].replace(/[^0-9,\.]/gi, ''));
-          let bb = Number(b[2].replace(/[^0-9,\.]/gi, ''));
-
-          if (aa > bb) return -1;
-          if (aa > bb) return 1;
-          return 0;
-
-        });
-
-        nums.sort((a, b) => {
-          let aa = Number(a[1]);
-          let bb = Number(b[1]);
-          if (aa > bb) return -1;
-          if (aa > bb) return 1;
-          return 0;
-        });
-
-        players = [...texts, ...nums];
-
-        data.players = players;
-
-        io.sockets.emit('gameStep', data);
-
-      }
+      io.sockets.emit('gameStep', data);
     }
 
     getData();

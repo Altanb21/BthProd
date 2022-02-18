@@ -171,7 +171,7 @@ let count = 0;
 let data = {};
 
 let stepGame = 1;
-const updateTime = 100;
+const updateTime = 150;
 
 let bots = [];
 let sourceInfoPlayers = [];
@@ -265,7 +265,7 @@ async function gameStart(io) {
 
       } else if (statusGame == 'Results') {
 
-        if (currentTimeResults == 0) {
+        if (currentTimeResults <= 0) {
 
           statusGame = 'Pause';
           bots = await getBots();
@@ -276,6 +276,8 @@ async function gameStart(io) {
             io.sockets.emit('pb', row);
           }
 
+          currentTimeResults = 0;
+
         }
 
         io.sockets.emit('gs', currentTimeResults);
@@ -285,8 +287,10 @@ async function gameStart(io) {
       } else if (statusGame = 'Pause') {
 
         currentTimePause -= updateTime;
-        if (currentTimePause == 0) {
+        if (currentTimePause <= 0) {
           statusGame = null;
+
+          currentTimePause = 0;
         }
 
         io.sockets.emit('gs', currentTimePause);

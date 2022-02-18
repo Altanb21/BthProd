@@ -92,7 +92,9 @@ const getBots = require('./vendor/getBots')
 const bidPlayers = require('./vendor/bidPlayers');
 
 function generateNumber(min, max) {
-  return Math.random() * (max - min) + min;
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 async function getMessages() {
   let now = new Date();
@@ -135,10 +137,9 @@ let count = 0;
 
 let data = {};
 
-const stepGame = 1.01;
+let stepGame = 1.1;
 const updateTime = 100;
 
-let players = [];
 let infoPlayers = [];
 
 let timer;
@@ -189,11 +190,11 @@ async function gameStart(io) {
 
       if (!statusGame) {
 
-        kef = generateNumber(1, 20);
+        kef = generateNumber(100, 2000);
         statusGame = 'Game';
         currentTimePause = 5000;
         currentTimeResults = 3000;
-        currentValue = 1;
+        currentValue = 100;
         count = 0;
 
         // Нужно сгенерировать игроков и их ставки... 
@@ -207,7 +208,10 @@ async function gameStart(io) {
       } else if (statusGame == 'Game') {
 
         // Обновляем значение
-        currentValue = currentValue * stepGame;
+        currentValue = currentValue + stepGame;
+        if (Math.trunc(currentValue) % 10 == 0) {
+          stepGame += 0.07;
+        }
 
         if (currentValue >= kef) {
           
@@ -215,13 +219,13 @@ async function gameStart(io) {
 
           data = { v: kef, s: statusGame };
 
-          results.push({ kef });
+          results.push({ kef: kef / 100 });
           if (results.length > 8) results.shift();
 
           data.r = results;
         } else {
 
-          data = { v: currentValue };
+          data = Math.trunc(currentValue);
         }
 
         count ++;
@@ -232,7 +236,7 @@ async function gameStart(io) {
           statusGame = 'Pause';
           data = { v: currentTimePause, s: statusGame };
         } else {
-          data = { v: currentTimeResults };
+          data = currentTimeResults;
         }
 
         currentTimeResults -= updateTime;
@@ -244,12 +248,12 @@ async function gameStart(io) {
           statusGame = null;
         }
 
-        data = { v: currentTimePause };
+        data = currentTimePause;
 
         
       }
 
-      io.sockets.emit('gameStep', data);
+      io.sockets.emit('g_s', data);
     }
 
     getData();

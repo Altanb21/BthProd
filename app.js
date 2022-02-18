@@ -171,7 +171,7 @@ let count = 0;
 let data = {};
 
 let stepGame = 1;
-const updateTime = 150;
+const updateTime = 100;
 
 let bots = [];
 let sourceInfoPlayers = [];

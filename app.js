@@ -105,7 +105,40 @@ async function getMessages() {
 async function getDataForNewConnection() {
   const messages = await getMessages();
 
-  return { messages, results, gameStatus: statusGame, curVal: currentValue, curCount: count, curPlayers: infoPlayers };
+  const curPlayers = bots.map(user => {
+
+    let winUser = winPlayers.find(row => row.u === user.login);
+    let isWin = winUser;
+
+    let userInfo = sourceInfoPlayers.find(row => row.u === user.login);
+
+    let amount = Number(userInfo.a);
+    let currency = user.currency;
+    let kef = '...';
+    let profit = '...';
+    if (isWin) {
+      kef = Number(winUser.k / 100).toFixed(2);
+      profit = Number(amount * kef - amount).toFixed(2);
+    } else {
+      if (statusGame === 'Results') {
+        profit = -amount;
+      }
+    }
+
+    let betAmount = `${amount} ${currency}`;
+    let profitText = `${profit} ${currency}`;
+
+    if (statusGame === 'Pause') {
+      kef = '...';
+      betAmount = '?';
+      profitText = '...';
+
+    }
+
+    return [user.login, kef, betAmount, profitText];
+  })
+
+  return { arrMsgs: messages, curRes: results, curStatus: statusGame, curVal: currentValue, curCount: count, curPlayers };
 }
 
 
@@ -140,42 +173,16 @@ let data = {};
 let stepGame = 1;
 const updateTime = 100;
 
+let bots = [];
+let sourceInfoPlayers = [];
 let infoPlayers = [];
+let winPlayers = [];
 
 let timer;
 
 let results = [];
 
 async function gameStart(io) {
-  function setPlayers(profitStatus=false, betStatus=true) {
-    return infoPlayers.map(row => {
-
-      let userKef = '...';
-      let profit = '...';
-      let betAmount = Number(row.betAmount).toFixed(2);
-      let betText = `${betAmount} ${row.currency}`;
-
-      if (row.betKef <= currentValue) {
-        userKef = Number(row.betKef).toFixed(2);
-        profit = Number((userKef * betAmount) - betAmount).toFixed(2);
-      } else {
-        if (profitStatus) {
-          profit = -betAmount;
-          userKef = Number(row.betKef).toFixed(2);
-        }
-      }
-
-      let profitText = `${profit} ${row.currency}`;
-
-      if (!betStatus) {
-        betText = '?';
-        userKef = '...';
-        profitText = '...';
-      }
-
-      return [ row.login, userKef, betText, profitText ];
-    });
-  }
 
   if (timer) {
     clearInterval(timer);
@@ -199,46 +206,79 @@ async function gameStart(io) {
         stepGame = 1;
 
         // Нужно сгенерировать игроков и их ставки... 
-        const bots = await getBots()
+        if (bots.length == 0) bots = await getBots();
         infoPlayers = await bidPlayers(bots, kef);
+        sourceInfoPlayers = infoPlayers;
+        winPlayers = [];
 
         console.log(`New Game: ${kef}\n`);
 
-        data = { v: currentValue, s: statusGame, p: infoPlayers };
+        //data = { v: currentValue, s: statusGame, p: infoPlayers };
+
+        
+        let obj = { p: infoPlayers };
+        io.sockets.emit('gst', obj);
+
 
       } else if (statusGame == 'Game') {
 
-        // Обновляем значение
-        currentValue = currentValue + stepGame;
-        if (Math.trunc(currentValue) % 10 == 0) {
-          stepGame += 0.07;
-        }
+        // Сначала проверяем есть ли игроки, которые выйграли ...
+        infoPlayers = infoPlayers.filter(user => {
+            if (user.k <= currentValue) {
+              let win = { u: user.u, k: user.k };
+              winPlayers.push(win);
+              io.sockets.emit('pw', win);
+            } else {
+              return user;
+            }
+        })
+
+
 
         if (currentValue >= kef) {
+
+          data = Math.trunc(currentValue);
+          io.sockets.emit('gs', data);
           
           statusGame = 'Results';
 
-          data = { v: kef, s: statusGame };
-
-          results.push({ kef: kef / 100 });
+          // Формируем массив результатов ...
+          results.push({ k: kef / 100 });
           if (results.length > 8) results.shift();
 
-          data.r = results;
+          // Отправляем результат
+          let obj = { v: kef, r: results };
+          io.sockets.emit('gc', obj);
+
         } else {
-
           data = Math.trunc(currentValue);
-        }
+          io.sockets.emit('gs', data);
 
-        count ++;
+          // Обновляем значение
+          currentValue = currentValue + stepGame;
+          if (Math.trunc(currentValue) % 10 == 0) {
+            stepGame += 0.07;
+          }
+
+          count ++;
+        }
 
       } else if (statusGame == 'Results') {
 
         if (currentTimeResults == 0) {
+
           statusGame = 'Pause';
-          data = { v: currentTimePause, s: statusGame };
-        } else {
-          data = currentTimeResults;
+          bots = await getBots();
+
+          let players = bots.map(row => { return { u: row.login, c: row.currency } });
+
+          for (let row of players) {
+            io.sockets.emit('pb', row);
+          }
+
         }
+
+        io.sockets.emit('gs', currentTimeResults);
 
         currentTimeResults -= updateTime;
 
@@ -249,12 +289,9 @@ async function gameStart(io) {
           statusGame = null;
         }
 
-        data = currentTimePause;
+        io.sockets.emit('gs', currentTimePause);
 
-        
       }
-
-      io.sockets.emit('g_s', data);
     }
 
     getData();
@@ -282,11 +319,6 @@ io.on('connection', async (socket) => {
     const messages = await getMessages();
     
     io.sockets.emit('getMessages', messages)
-  });
-
-  socket.on('connectToGame', () => {
-    console.log(`[${dateLog}] - user connected to game`);
-    // Должны посмотреть есть ли активная игра на сервере...
   });
 
   // То, что отправляем по умолчанию ...

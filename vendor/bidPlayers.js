@@ -1,6 +1,11 @@
 const bidPlayers = async (players, kef) => {
 
   function getRandom(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  function randomAmount(min, max) {
     return Math.random() * (max - min) + min;
   }
 
@@ -12,15 +17,14 @@ const bidPlayers = async (players, kef) => {
     let winner = random < luck;
 
     let betKef;
-    (winner) ? betKef = (getRandom(1, kef-0.01)) : betKef = getRandom(kef+0.01, 20);
+    (winner) ? betKef = (getRandom(100, kef - 0.1)) : betKef = getRandom(kef + 0.1, 2000);
 
     //console.log(`Bot: ${row.login} - ${betKef} - winner: ${winner} [ ${row.luck}% ]`);
 
     return {
-      login: row.login,
-      currency: row.currency,
-      betAmount: getRandom(row.min, row.max),
-      betKef
+      u: row.login,
+      a: Number(randomAmount(row.min, row.max)).toFixed(2),
+      k: betKef
     }
   })
 

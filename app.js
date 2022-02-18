@@ -137,7 +137,7 @@ let count = 0;
 
 let data = {};
 
-let stepGame = 1.1;
+let stepGame = 1;
 const updateTime = 100;
 
 let infoPlayers = [];
@@ -196,6 +196,7 @@ async function gameStart(io) {
         currentTimeResults = 3000;
         currentValue = 100;
         count = 0;
+        stepGame = 1;
 
         // Нужно сгенерировать игроков и их ставки... 
         const bots = await getBots()

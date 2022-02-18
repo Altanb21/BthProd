@@ -171,7 +171,7 @@ let count = 0;
 let data = {};
 
 let stepGame = 1;
-const updateTime = 100;
+const updateTime = 120;
 
 let bots = [];
 let sourceInfoPlayers = [];
@@ -231,7 +231,7 @@ async function gameStart(io) {
             } else {
               return user;
             }
-        })
+        });
 
 
 
@@ -274,6 +274,10 @@ async function gameStart(io) {
 
           for (let row of players) {
             io.sockets.emit('pb', row);
+          }
+
+          if (players.length == 0) {
+            io.sockets.emit('pb', null);
           }
 
           currentTimeResults = 0;

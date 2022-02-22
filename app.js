@@ -217,7 +217,7 @@ async function gameStart(io) {
 
         
         let obj = { p: infoPlayers };
-        io.sockets.emit('gst', obj);
+        io.emit('gst', obj);
 
 
       } else if (statusGame == 'Game') {
@@ -227,7 +227,7 @@ async function gameStart(io) {
             if (user.k <= currentValue) {
               let win = { u: user.u, k: user.k };
               winPlayers.push(win);
-              io.sockets.emit('pw', win);
+              io.emit('pw', win);
             } else {
               return user;
             }
@@ -238,7 +238,7 @@ async function gameStart(io) {
         if (currentValue >= kef) {
 
           data = Math.trunc(currentValue);
-          io.sockets.emit('gs', data);
+          io.emit('gs', data);
           
           statusGame = 'Results';
 
@@ -248,11 +248,11 @@ async function gameStart(io) {
 
           // Отправляем результат
           let obj = { v: kef, r: results };
-          io.sockets.emit('gc', obj);
+          io.emit('gc', obj);
 
         } else {
           data = Math.trunc(currentValue);
-          io.sockets.emit('gs', data);
+          io.emit('gs', data);
 
           // Обновляем значение
           currentValue = currentValue + stepGame;
@@ -273,18 +273,18 @@ async function gameStart(io) {
           let players = bots.map(row => { return { u: row.login, c: row.currency } });
 
           for (let row of players) {
-            io.sockets.emit('pb', row);
+            io.emit('pb', row);
           }
 
           if (players.length == 0) {
-            io.sockets.emit('pb', null);
+            io.emit('pb', null);
           }
 
           currentTimeResults = 0;
 
         }
 
-        io.sockets.emit('gs', currentTimeResults);
+        io.emit('gs', currentTimeResults);
 
         currentTimeResults -= updateTime;
 
@@ -297,7 +297,7 @@ async function gameStart(io) {
           currentTimePause = 0;
         }
 
-        io.sockets.emit('gs', currentTimePause);
+        io.emit('gs', currentTimePause);
 
       }
     }
@@ -326,7 +326,7 @@ io.on('connection', async (socket) => {
     await message.save()
     const messages = await getMessages();
     
-    io.sockets.emit('getMessages', messages)
+    io.emit('getMessages', messages)
   });
 
   // То, что отправляем по умолчанию ...

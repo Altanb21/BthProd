@@ -163,7 +163,7 @@ async function getDataForNewConnection() {
 
 let statusGame = null;
 let kef = null;
-let currentValue = 1;
+let currentValue = 100;
 let currentTimeResults = 5000;
 let currentTimePause = 2000
 let count = 0;

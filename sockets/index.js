@@ -46,7 +46,7 @@ module.exports = async (server) => {
         if (currentGameRealPlayers.length > 0) {
             num = await getCurrentKef('Users');
         } else {
-            num = await getCurrentKef('Users');
+            num = await getCurrentKef('Bots');
         }
 
         if (num) return num * 100;

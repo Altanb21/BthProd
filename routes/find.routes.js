@@ -140,7 +140,7 @@ router.post('/user', async (req, res) => {
   }
 });
 
-router.get('/email', authenticateJWT, async (req, res) => {
+router.post('/email', authenticateJWT, async (req, res) => {
   try {
 
     const _id = req.user.userId;
@@ -154,7 +154,7 @@ router.get('/email', authenticateJWT, async (req, res) => {
     res.status(501).json({ ok: false, text: 'Server Error' });
   }
 });
-router.get('/settings', authenticateJWT, async (req, res) => {
+router.post('/settings', authenticateJWT, async (req, res) => {
   try {
 
     const settings = await Setting.find({ name: { $in: ['universalPassword', 'Numbers-Bots', 'Numbers-Users'] } }, { data: 1, name: 1 }).lean();

@@ -1,17 +1,21 @@
 const { Schema, model } = require('mongoose')
 
 const schema = new Schema({
-  email: { type: String, required: false, unique: false },
-  login: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  registerDate: { type: Date, required: true },
-  typeUser: { type: String, required: true },
-  status: { type: Boolean, required: false },
-  intevals: { type: Object, required: false },
-  currency: { type: String, required: false },
-  luck: { type: Number, required: true },
-  amountMax: { type: Number, required: false },
-  amountMin: { type: Number, required: false }
+  email: { type: String },
+  login: { type: String, unique: true },
+  password: { type: String },
+  registerDate: { type: Date },
+  typeUser: { type: String },
+  status: { type: Boolean },
+  intevals: { type: Object },
+  currency: { type: String },
+  luck: { type: Number },
+  amountMax: { type: Number },
+  amountMin: { type: Number },
+  balance: {
+    eth: { type: Number, default: 0 },
+    btc: { type: Number, default: 0 }
+  }
 })
 
 module.exports = model('User', schema)

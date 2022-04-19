@@ -6,13 +6,14 @@ const User = require('../models/User')
 const config = require('../config')
 const jwt = require("jsonwebtoken")
 const bcrypt = require("bcrypt")
-const { check, validationResult } = require("express-validator")
+const { check, validationResult } = require("express-validator");
 
+const authenticateJWT = require('../controllers/controller.authtoken');
 
 // /auth/register
 router.post('/register',
   [
-    check("password", "Минимальная длинна пароля составляет 4 символа").isLength({ min: 4 })
+    check("password", "Минимальная длинна пароля составляет 6 символов").isLength({ min: 6 })
   ],
   async (req, res) => {
     try {
@@ -22,46 +23,86 @@ router.post('/register',
         return res.status(400).json({
           ok: false,
           errors: errors.array(),
-          message: "Получены неверные данные при регистрации"
+          message: "Minimum password length 6 characters"
         })
       }
 
-      const { email, password, typeUser, login, currency, luck, amountMax, amountMin, intevals } = req.body
+      let { email, password, typeUser, login, currency, luck, amountMax, amountMin, intevals } = req.body
 
-      let candidate
-
-      if(email) {
-        candidate = await User.findOne({ email })
-      } else {
-        candidate = await User.findOne({ login })
-      }
+      let candidate = await User.findOne({ login });
 
       if (candidate) {
-        return res.status(400).json({ok: false, message: "Такой пользователь уже существует" })
+        return res.status(400).json({ok: false, message: "A user with the same username already exists" })
       }
 
-      const hashedPassword = await bcrypt.hash(password, 12)
+      if (email) {
+        let candidate = await User.findOne({ email });
+        if (candidate) {
+          return res.status(400).json({ok: false, message: "A user with the same email already exists" })
+        }
+      } else {
+        email = '';
+      }
 
-      if(typeUser != '') type = 'User'
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const balance = {
+        eth: 0,
+        btc: 0
+      }
+
+      if (typeUser) {
+        (currency == 'BTC') ? balance.btc = amountMax * 100 : balance.eth = amountMax * 100;
+      } else {
+        typeUser = 'User';
+      }
+
+
       const registerDate = new Date()
 
-      const user = new User({ email, password: hashedPassword, typeUser, registerDate, login, currency, luck, amountMax, amountMin, intevals })
+      const user = new User({ 
+        email, 
+        password: hashedPassword, 
+        typeUser, 
+        registerDate, 
+        login, 
+        currency, 
+        luck, 
+        amountMax, 
+        amountMin, 
+        intevals,
+        balance
+      })
 
       await user.save()
 
       const token = jwt.sign(
-        { userId: user.id },
+        { userId: user.id, userName: user.login, userType: user.typeUser },
         config.JWT_SECRET,
         { expiresIn: "30d" }
       )
 
       return res.status(200).json({ ok: true, message: 'Пользователь создан', token, userId: user.id })
     } catch (e) {
+      console.log(e);
       const error = e
       res.status(501).json({ ok: false, message: 'Что-то пошло не так, попробуйте снова', error: `Детали: ${error}` })
     }
-  })
+})
 
+router.post('/token', authenticateJWT, async (req, res) => {
+
+  const userId = req.user.userId;
+
+  let user = await User.findOne({ _id: userId }, { balance: 1 });
+  if (!user) {
+    res.json({ ok: false, text: 'User not found' });
+    return;
+  }
+
+  res.json({ ok: true, balance: user.balance });
+
+});
 
 // /auth/login
 router.post('/login',
@@ -95,18 +136,80 @@ router.post('/login',
       }
 
       const token = jwt.sign(
-        { userId: user.id },
+        { userId: user.id, userName: user.login, userType: user.typeUser },
         config.JWT_SECRET,
-        { expiresIn: "1d" }
+        { expiresIn: "30d" }
       )
 
-      return res.status(200).json({ ok: true, message: 'Всё ок', token, userId: user.id })
-    } catch (e) {
-      const error = e
-      res.status(501).json({ ok: false, message: 'Что-то пошло не так, попробуйте снова', error: `Детали: ${error}` })
+      req.user = user.id;
 
-      console.log(error)
+      return res.status(200).json({ ok: true, message: 'Всё ок', token, userId: user.id });
+
+    } catch (e) {
+
+      res.status(501).json({ ok: false, message: 'Что-то пошло не так, попробуйте снова', error: `Детали: ${e}` });
+
     }
-  })
+})
+
+router.post('/change-email', authenticateJWT, async (req, res) => {
+  try {
+
+    const _id = req.user.userId;
+    const { password, email } = req.body;
+
+    const user = await User.findOne({ _id });
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (isMatch) {
+      user.email = email;
+      await user.save();
+
+      res.status(200).json({ ok: true });
+    } else {
+      res.json({ ok: false, text: 'Password entered incorrectly' });
+    }
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+});
+
+router.post('/change-password', authenticateJWT, async (req, res) => {
+  try {
+
+    const _id = req.user.userId;
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
+    if (newPassword != confirmPassword) {
+      res.json({ ok: false, text: 'New password and confirmation password do not match' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      res.json({ ok: false, text: 'password must contain at least 6 characters' });
+      return;
+    }
+
+    const user = await User.findOne({ _id });
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (isMatch) {
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      user.password = hashedPassword;
+      await user.save();
+
+      res.status(200).json({ ok: true });
+    } else {
+      res.json({ ok: false, text: 'Old password entered incorrectly' });
+    }
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+})
 
 module.exports = router

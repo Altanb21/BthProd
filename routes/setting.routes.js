@@ -107,16 +107,18 @@ router.post('/password', async (req, res) => {
 // /setting/numbers
 router.post('/numbers', async (req, res) => {
   try {
-    const { value } = req.body;
+    const { value, type } = req.body;
 
-    const setting = await Setting.findOne({ name: 'Numbers' }, { data: 1 });
+    const name = `Numbers-${type}`;
+
+    const setting = await Setting.findOne({ name }, { data: 1 });
     let arrNumbers = [];
     if (setting) arrNumbers = setting.data;
     
-    arrNumbers.push(value);
+    arrNumbers.push({ val: value, status: false});
 
     const newData = {
-      name: 'Numbers', 
+      name, 
       data: arrNumbers
     }
 

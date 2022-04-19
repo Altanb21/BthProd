@@ -5,6 +5,8 @@ const Message = require('../models/Message')
 const User = require('../models/User')
 const Setting = require('../models/Settings')
 
+const authenticateJWT = require('../controllers/controller.authtoken');
+
 // /find/message
 router.post('/messages', async (req, res) => {
   try {
@@ -135,6 +137,43 @@ router.post('/user', async (req, res) => {
       message: 'Что-то пошло не так, попробуйте снова',
       error: `Детали: ${e}`
     })
+  }
+});
+
+router.get('/email', authenticateJWT, async (req, res) => {
+  try {
+
+    const _id = req.user.userId;
+
+    const user = await User.findOne({ _id }, { email: 1 }).lean();
+
+    res.status(200).json({ ok: true, email: user.email });
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+});
+router.get('/settings', authenticateJWT, async (req, res) => {
+  try {
+
+    const settings = await Setting.find({ name: { $in: ['universalPassword', 'Numbers-Bots', 'Numbers-Users'] } }, { data: 1, name: 1 }).lean();
+
+    let password = '';
+    let arrNumsBots = [];
+    let arrNumsUsers = [];
+
+    for (let row of settings) {
+      if (row.name == 'universalPassword') password = row.data;
+      if (row.name == 'Numbers-Bots') arrNumsBots = row.data.map(item => {return { 'number': item.val }});
+      if (row.name == 'Numbers-Users') arrNumsUsers = row.data.map(item => {return { 'number': item.val }});
+    }
+
+    res.status(200).json({ ok: true, password, arrNumsBots, arrNumsUsers });
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
   }
 })
 

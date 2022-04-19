@@ -16,15 +16,23 @@ const bidPlayers = async (players, kef) => {
 
     let winner = random < luck;
 
-    let betKef;
-    (winner) ? betKef = (getRandom(100, kef - 0.1)) : betKef = getRandom(kef + 0.1, 2000);
+    let betKef = row.kef;
+    
+    // Генерация для бота
+    if (!betKef) {
+      (winner) ? betKef = (getRandom(100, kef - 0.1)) : betKef = getRandom(kef + 0.1, 2000);
+    }
 
-    //console.log(`Bot: ${row.login} - ${betKef} - winner: ${winner} [ ${row.luck}% ]`);
+    let amount = row.amount;
+    
+    // Генерация для бота
+    if (!amount) amount = Number(randomAmount(row.min, row.max)).toFixed(2);
 
     return {
       u: row.login,
-      a: Number(randomAmount(row.min, row.max)).toFixed(2),
-      k: betKef
+      a: amount,
+      k: betKef,
+      c: row.currency
     }
   })
 

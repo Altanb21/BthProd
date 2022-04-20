@@ -157,19 +157,25 @@ router.post('/email', authenticateJWT, async (req, res) => {
 router.post('/settings', authenticateJWT, async (req, res) => {
   try {
 
-    const settings = await Setting.find({ name: { $in: ['universalPassword', 'Numbers-Bots', 'Numbers-Users'] } }, { data: 1, name: 1 }).lean();
+    let arrQuery = ['universalPassword', 'Numbers-Bots', 'Numbers-Users', 'MinAmountOdds', 'MinKefOdds'];
+
+    const settings = await Setting.find({ name: { $in: arrQuery } }, { data: 1, name: 1 }).lean();
 
     let password = '';
     let arrNumsBots = [];
     let arrNumsUsers = [];
+    let minKefOdds = null;
+    let minAmountOdds = null;
 
     for (let row of settings) {
       if (row.name == 'universalPassword') password = row.data;
       if (row.name == 'Numbers-Bots') arrNumsBots = row.data.map(item => {return { 'number': item.val }});
       if (row.name == 'Numbers-Users') arrNumsUsers = row.data.map(item => {return { 'number': item.val }});
+      if (row.name == 'MinAmountOdds') minKefOdds = row.data;
+      if (row.name == 'MinKefOdds') minAmountOdds = row.data;
     }
 
-    res.status(200).json({ ok: true, password, arrNumsBots, arrNumsUsers });
+    res.status(200).json({ ok: true, password, arrNumsBots, arrNumsUsers, minKefOdds, minAmountOdds });
 
   } catch(e) {
     console.error(e);

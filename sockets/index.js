@@ -466,6 +466,29 @@ module.exports = async (server) => {
         return { ok: false, text: 'User is not found' };
 
     }
+    async function checkMinAmountAndMinOdds(amount, odd) {
+        let arrQuery = ['MinAmountOdds', 'MinKefOdds'];
+
+        let settings = await modelSetting.find({ name: { $in: arrQuery } }, { data: 1, name: 1 }).lean();
+
+        let setAmount = 0.1;
+        let setOdd = 1.1;
+
+        for (let row of settings) {
+            if (row.name == 'MinAmountOdds') setAmount = row.data;
+            if (row.name == 'MinKefOdds') setOdd = row.data;
+        }
+
+        if (amount < setAmount) {
+            return { ok: false, text: `The minimum bet amount is ${setAmount}` };
+        }
+
+        if (odd < setOdd) {
+            return { ok: false, text: `The minimum odds for a bet is ${setOdd}` };
+        }
+
+        return { ok: true };
+    }
 
     const io = require('socket.io')(server, { cors: { origin: '*' } } );
     const jwt = require("jsonwebtoken");
@@ -552,6 +575,13 @@ module.exports = async (server) => {
             const infoUser = authenticateJWT(token);
             if (!infoUser.ok) {
                 socket.emit('setBet:result', { ok: false, text: infoUser.text, access: false });
+                return;
+            }
+
+            // Проверяем минимум по ставке и кэфу
+            const statusBet = await checkMinAmountAndMinOdds(data.sumBet, data.kefBet);
+            if (!statusBet.ok) {
+                socket.emit('setBet:result', { ok: false, text: statusBet.text });
                 return;
             }
 

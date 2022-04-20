@@ -136,5 +136,57 @@ router.post('/numbers', async (req, res) => {
     })
   }
 });
+router.post('/remove-numbers', async (req, res) => {
+  try {
+
+    const { name, index } = req.body;
+
+    const set = await Setting.findOne({ name }, { data: 1 }).lean();
+    if (set) {
+      let arr = set.data;
+      arr.splice(index-1, 1);
+
+      await Setting.findOneAndUpdate({ name }, { data: arr });
+    }
+
+    res.json({ ok: true });
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+});
+
+// /setting/min_amount_odds
+router.post('/min_amount_odds', async (req, res) => {
+  try {
+
+    const { val } = req.body;
+
+    await Setting.findOneAndUpdate({ name: 'MinAmountOdds' }, { data: val }, { upsert: true });
+
+    res.json({ ok: true });
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+});
+
+// /setting/min_kef_odds
+router.post('/min_kef_odds', async (req, res) => {
+  try {
+
+    const { val } = req.body;
+
+    await Setting.findOneAndUpdate({ name: 'MinKefOdds' }, { data: val }, { upsert: true });
+
+    res.json({ ok: true });
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+});
 
 module.exports = router

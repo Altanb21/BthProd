@@ -88,9 +88,7 @@ router.post('/users', async (req, res) => {
     let { typeUser, returnArray } = req.body;
     if (!typeUser) typeUser = 'Bot';
 
-    console.log(req.body);
-
-    const users = await User.find({ typeUser })
+    const users = await User.find({ typeUser }, { password: 0 })
 
     if(users.length == 0) return res.status(200).json({
       ok: false,
@@ -105,6 +103,7 @@ router.post('/users', async (req, res) => {
       message: 'Успешно! Пользователи успешно найдены',
       users: arrUsers
     })
+
   } catch (e) {
     res.status(501).json({
       ok: false,
@@ -176,6 +175,27 @@ router.post('/settings', authenticateJWT, async (req, res) => {
     }
 
     res.status(200).json({ ok: true, password, arrNumsBots, arrNumsUsers, minKefOdds, minAmountOdds });
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+})
+
+router.post('/balance', authenticateJWT, async (req, res) => {
+  try {
+
+    const { login } = req.body;
+
+    const user = await User.findOne({ login }, { balance: 1 });
+    if (!user) {
+      res.json({ ok: false, text: 'User is not found' });
+      return;
+    }
+
+    const balance = user.balance;
+
+    res.status(200).json({ ok: true, balance });
 
   } catch(e) {
     console.error(e);

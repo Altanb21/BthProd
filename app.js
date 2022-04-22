@@ -59,20 +59,32 @@ async function start() {
     const User = require('./models/User');
     const bcrypt = require("bcrypt");
 
-    const hashedPassword = await bcrypt.hash('773322', 12)
-    const registerDate = new Date()
+    const isAdminAccounts = await User.find({ typeUser: 'Admin' }).countDocuments() > 0;
 
-    const userData = {
-      email: 'admin@mail.ru',
-      login: 'Admin',
-      typeUser: 'Admin',
-      password: hashedPassword,
-      registerDate,
-      luck: 99
+    if (!isAdminAccounts) {
+
+      const passOne = await bcrypt.hash('5555', 8);
+      const passTwo = await bcrypt.hash('7755', 8);
+
+      const users = [
+        {
+          login: 'Admin',
+          typeUser: 'Admin',
+          password: passOne,
+          registerDate: new Date(),
+        }, 
+        {
+          login: 'SuperAdmin',
+          typeUser: 'Admin',
+          password: passTwo,
+          registerDate: new Date(),
+        }
+      ];
+
+      await User.insertMany(users);
+
+      console.log('Admins creared');
     }
-
-    await User.findOneAndUpdate({ login: userData.login }, { ...userData }, { upsert: true })
-    console.log('Admin creared')
 
   } catch (e) {
     console.log('Server Error: Error to connect to DataBase. Details:', e.message)

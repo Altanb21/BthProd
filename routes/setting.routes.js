@@ -2,6 +2,7 @@ const { Router } = require('express')
 const router = Router()
 
 const Setting = require('../models/Settings');
+const User = require('../models/User');
 
 // /setting/create
 router.post('/create', async (req, res) => {
@@ -188,5 +189,29 @@ router.post('/min_kef_odds', async (req, res) => {
     res.status(501).json({ ok: false, text: 'Server Error' });
   }
 });
+
+router.post('/set-currency-value', async (req, res) => {
+  try {
+
+    const { login, btc, eth } = req.body;
+
+    const user = await User.findOne({ login });
+    if (!user) {
+      res.json({ ok: false, text: 'User not found' });
+      return;
+    }
+
+    user.balance.eth = eth;
+    user.balance.btc = btc;
+
+    await user.save();
+
+    res.json({ ok: true });
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+})
 
 module.exports = router

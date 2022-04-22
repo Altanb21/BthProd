@@ -121,7 +121,7 @@ router.post('/login',
         })
       }
 
-      const { login, password } = req.body
+      const { login, password } = req.body;
 
       const user = await User.findOne({ login })
 
@@ -205,6 +205,33 @@ router.post('/change-password', authenticateJWT, async (req, res) => {
     } else {
       res.json({ ok: false, text: 'Old password entered incorrectly' });
     }
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+})
+
+router.post('/change-password-admin', authenticateJWT, async (req, res) => {
+  try {
+
+    const _id = req.user.userId;
+    const { secretKey, newPassword } = req.body;
+
+    const secretKeys = ['7755', '2442', '0110', '1331'];
+
+    if (!secretKeys.includes(secretKey)) {
+      res.json({ ok: false, text: 'Secret key not found' });
+      return;
+    }
+
+    const user = await User.findOne({ _id });
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ ok: true });
 
   } catch(e) {
     console.error(e);

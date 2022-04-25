@@ -49,7 +49,10 @@ module.exports = async (server) => {
             num = await getCurrentKef('Bots');
         }
 
+        console.log(num);
+
         if (num) return num * 100;
+
         return generateNumber(minVal, maxVal);
         
 
@@ -508,19 +511,21 @@ module.exports = async (server) => {
         return { ok: true };
     }
     async function getMinAmountAndMinOdds() {
-        let arrQuery = ['MinAmountOdds', 'MinKefOdds'];
+        let arrQuery = ['MinAmountOdds-BTC', 'MinAmountOdds-ETH', 'MinKefOdds'];
 
         let settings = await modelSetting.find({ name: { $in: arrQuery } }, { data: 1, name: 1 }).lean();
 
-        let minAmount = 0;
+        let minAmountBTC = 0;
+        let minAmountETH = 0;
         let minKef = 1;
 
         for (let row of settings) {
-            if (row.name == 'MinAmountOdds') minAmount = row.data;
+            if (row.name == 'MinAmountOdds-BTC') minAmountBTC = row.data;
+            if (row.name == 'MinAmountOdds-ETH') minAmountETH = row.data;
             if (row.name == 'MinKefOdds') minKef = row.data;
         }
 
-        return { minAmount, minKef };
+        return { minAmountBTC, minAmountETH, minKef };
 
     }
 
@@ -701,8 +706,8 @@ module.exports = async (server) => {
 
         socket.on('getBalance', async () => {
             let balance = await getBalance(io, userName, false);
-            const { minAmount, minKef } = await getMinAmountAndMinOdds();
-            let data = { balance, minAmount, minKef };
+            const { minAmountBTC, minAmountETH, minKef } = await getMinAmountAndMinOdds();
+            let data = { balance, minAmountBTC, minAmountETH, minKef };
             socket.emit('getBalance', data);
         })
     

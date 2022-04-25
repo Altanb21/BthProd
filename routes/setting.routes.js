@@ -116,7 +116,11 @@ router.post('/numbers', async (req, res) => {
     let arrNumbers = [];
     if (setting) arrNumbers = setting.data;
     
-    arrNumbers.push({ val: value, status: false});
+    if (Array.isArray(value)) {
+      arrNumbers = value.map(item => { return { val: item, status: false } });
+    } else {
+      arrNumbers.push({ val: value, status: false});
+    }
 
     const newData = {
       name, 
@@ -162,9 +166,9 @@ router.post('/remove-numbers', async (req, res) => {
 router.post('/min_amount_odds', async (req, res) => {
   try {
 
-    const { val } = req.body;
+    const { val, type } = req.body;
 
-    await Setting.findOneAndUpdate({ name: 'MinAmountOdds' }, { data: val }, { upsert: true });
+    await Setting.findOneAndUpdate({ name: `MinAmountOdds-${type}` }, { data: val }, { upsert: true });
 
     res.json({ ok: true });
 

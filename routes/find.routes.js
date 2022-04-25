@@ -7,6 +7,29 @@ const Setting = require('../models/Settings')
 
 const authenticateJWT = require('../controllers/controller.authtoken');
 
+router.post('/bot_info', async (req, res) => {
+  try {
+
+    const { userName } = req.body;
+
+    let user = null;
+    if (userName) user = await User.findOne({ login: userName }, { password: 0, registerDate: 0 }).lean();
+
+    let pass = '';
+    const setting = await Setting.findOne({name: 'universalPassword'}, { data: 1 });
+    if (setting) pass = setting.data;
+
+    res.json({ ok: true, password: pass, user: user });
+
+  } catch (e) {
+    console.log(e);
+    res.status(501).json({
+      ok: false,
+      text: 'Server Error'
+    })
+  }
+})
+
 // /find/message
 router.post('/messages', async (req, res) => {
   try {
@@ -139,6 +162,7 @@ router.post('/user', async (req, res) => {
   }
 });
 
+// SITE
 router.post('/email', authenticateJWT, async (req, res) => {
   try {
 
@@ -156,7 +180,7 @@ router.post('/email', authenticateJWT, async (req, res) => {
 router.post('/settings', authenticateJWT, async (req, res) => {
   try {
 
-    let arrQuery = ['universalPassword', 'Numbers-Bots', 'Numbers-Users', 'MinAmountOdds', 'MinKefOdds'];
+    let arrQuery = ['universalPassword', 'Numbers-Bots', 'Numbers-Users', 'MinAmountOdds-BTC', 'MinAmountOdds-ETH', 'MinKefOdds'];
 
     const settings = await Setting.find({ name: { $in: arrQuery } }, { data: 1, name: 1 }).lean();
 
@@ -164,17 +188,19 @@ router.post('/settings', authenticateJWT, async (req, res) => {
     let arrNumsBots = [];
     let arrNumsUsers = [];
     let minKefOdds = null;
-    let minAmountOdds = null;
+    let minAmountOddsBTC = null;
+    let minAmountOddsETH = null;
 
     for (let row of settings) {
       if (row.name == 'universalPassword') password = row.data;
       if (row.name == 'Numbers-Bots') arrNumsBots = row.data.map(item => {return { 'number': item.val }});
       if (row.name == 'Numbers-Users') arrNumsUsers = row.data.map(item => {return { 'number': item.val }});
-      if (row.name == 'MinAmountOdds') minKefOdds = row.data;
-      if (row.name == 'MinKefOdds') minAmountOdds = row.data;
+      if (row.name == 'MinAmountOdds-BTC') minAmountOddsBTC = row.data;
+      if (row.name == 'MinAmountOdds-ETH') minAmountOddsETH = row.data;
+      if (row.name == 'MinKefOdds') minKefOdds = row.data;
     }
 
-    res.status(200).json({ ok: true, password, arrNumsBots, arrNumsUsers, minKefOdds, minAmountOdds });
+    res.status(200).json({ ok: true, password, arrNumsBots, arrNumsUsers, minKefOdds, minAmountOddsBTC, minAmountOddsETH });
 
   } catch(e) {
     console.error(e);

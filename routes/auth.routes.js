@@ -29,9 +29,9 @@ router.post('/register',
 
       let { email, password, typeUser, login, currency, luck, amountMax, amountMin, intevals } = req.body
 
-      let candidate = await User.findOne({ login });
+      let candidate = await User.findOne({ login }).lean();
 
-      if (candidate) {
+      if (candidate && candidate.typeUser != 'Bot') {
         return res.status(400).json({ok: false, message: "A user with the same username already exists" })
       }
 
@@ -57,32 +57,49 @@ router.post('/register',
         typeUser = 'User';
       }
 
+      if (candidate) {
 
-      const registerDate = new Date()
+        candidate.email = email;
+        candidate.password = hashedPassword;
+        candidate.login = login;
+        candidate.currency = currency;
+        candidate.luck = luck;
+        candidate.amountMin = amountMin;
+        candidate.amountMax = amountMax;
+        candidate.intevals = intevals;
+        candidate.balance = balance;
 
-      const user = new User({ 
-        email, 
-        password: hashedPassword, 
-        typeUser, 
-        registerDate, 
-        login, 
-        currency, 
-        luck, 
-        amountMax, 
-        amountMin, 
-        intevals,
-        balance
-      })
+        await User.findOneAndUpdate({ _id: candidate._id }, candidate);
+        
+        return res.status(200).json({ ok: true, message: 'Данные пользователя обновлены' });
 
-      await user.save()
+      } else {
+        const registerDate = new Date()
+        const user = new User({ 
+          email, 
+          password: hashedPassword, 
+          typeUser, 
+          registerDate, 
+          login, 
+          currency, 
+          luck, 
+          amountMax, 
+          amountMin, 
+          intevals,
+          balance
+        })
 
-      const token = jwt.sign(
-        { userId: user.id, userName: user.login, userType: user.typeUser },
-        config.JWT_SECRET,
-        { expiresIn: "30d" }
-      )
+        await user.save()
 
-      return res.status(200).json({ ok: true, message: 'Пользователь создан', token, userId: user.id })
+        const token = jwt.sign(
+          { userId: user.id, userName: user.login, userType: user.typeUser },
+          config.JWT_SECRET,
+          { expiresIn: "30d" }
+        )
+
+        return res.status(200).json({ ok: true, message: 'Пользователь создан', token, userId: user.id })
+      }
+
     } catch (e) {
       console.log(e);
       const error = e

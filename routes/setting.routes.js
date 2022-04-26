@@ -2,6 +2,7 @@ const { Router } = require('express')
 const router = Router()
 
 const Setting = require('../models/Settings');
+const User = require('../models/User');
 
 // /setting/create
 router.post('/create', async (req, res) => {
@@ -115,7 +116,11 @@ router.post('/numbers', async (req, res) => {
     let arrNumbers = [];
     if (setting) arrNumbers = setting.data;
     
-    arrNumbers.push({ val: value, status: false});
+    if (Array.isArray(value)) {
+      arrNumbers = value.map(item => { return { val: item, status: false } });
+    } else {
+      arrNumbers.push({ val: value, status: false});
+    }
 
     const newData = {
       name, 
@@ -161,9 +166,9 @@ router.post('/remove-numbers', async (req, res) => {
 router.post('/min_amount_odds', async (req, res) => {
   try {
 
-    const { val } = req.body;
+    const { val, type } = req.body;
 
-    await Setting.findOneAndUpdate({ name: 'MinAmountOdds' }, { data: val }, { upsert: true });
+    await Setting.findOneAndUpdate({ name: `MinAmountOdds-${type}` }, { data: val }, { upsert: true });
 
     res.json({ ok: true });
 
@@ -188,5 +193,29 @@ router.post('/min_kef_odds', async (req, res) => {
     res.status(501).json({ ok: false, text: 'Server Error' });
   }
 });
+
+router.post('/set-currency-value', async (req, res) => {
+  try {
+
+    const { login, btc, eth } = req.body;
+
+    const user = await User.findOne({ login });
+    if (!user) {
+      res.json({ ok: false, text: 'User not found' });
+      return;
+    }
+
+    user.balance.eth = eth;
+    user.balance.btc = btc;
+
+    await user.save();
+
+    res.json({ ok: true });
+
+  } catch(e) {
+    console.error(e);
+    res.status(501).json({ ok: false, text: 'Server Error' });
+  }
+})
 
 module.exports = router

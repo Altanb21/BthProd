@@ -50,87 +50,8 @@ module.exports = async (server) => {
         }
 
         if (num) return num * 100;
+
         return generateNumber(minVal, maxVal);
-        
-
-        const listPriceCurrency = {
-            BTC: 43400,
-            ETH: 3217
-        }
-
-        if (currentGameRealPlayers.length > 0) {
-
-            let SP = 0;
-            let M = 0;
-            let DISP = 0;
-            let NO = 0;
-            let countUsers = currentGameRealPlayers.length;
-
-            console.log(`Online Players: ${countUsers}`);
-
-            let arrPX = [];
-
-            // Собрали кэфы и суммы ставок в долларах, посчитали  М - не знаю что значит
-            for (let row of currentGameRealPlayers) {
-                let currency = row.currency;
-                let amount = row.amount;
-
-                // Считаем сумму ставки в долларах
-                let p = amount * listPriceCurrency[currency];
-
-                let x = row.kef;
-
-                SP += p;
-                M += (x * p);
-
-                arrPX.push({ p, x });
-            }
-
-            M = M / SP;
-
-            // Считаем дисперсию
-            for (let row of arrPX) {
-                DISP += (row.p * Math.pow(row.x - M, 2))
-            }
-
-            DISP = DISP / SP;
-            NO = Math.sqrt(DISP);
-
-            console.log(`SP: ${SP}\nM: ${M}\nDISP: ${DISP}\nNO: ${NO}`);
-
-            if (countUsers == 1) {
-                let num = generateNumber(30, M / 2);
-                kef = M - num;
-
-                console.log(`kef = ${M} - ${num}`);
-
-            } else if (countUsers == 2) {
-
-            } else if (countUsers == 3) {
-                
-            } else if (countUsers == 4) {
-                
-            } else if (countUsers == 5) {
-                
-            } else if (countUsers == 6) {
-                
-            } else if (countUsers == 7) {
-                
-            } else if (countUsers > 7) {
-                
-            } else {
-                kef = generateNumber(minVal, maxVal);
-            }
-
-            kef = kef;
-
-        } else {
-            kef = 122;//generateNumber(minVal, maxVal);
-        }
-
-        console.log(`KEF: ${kef}\n`);
-
-        return kef;
     }
 
     async function getMessages() {
@@ -138,7 +59,7 @@ module.exports = async (server) => {
         const messages = await msg.find({ date: { $lte: now } }).sort({ date: 1 }).lean();
         return messages;
     }
-    async function getDataForNewConnection() {
+    async function getDataForNewConnection(userName) {
         const messages = await getMessages();
         
         const curPlayers = bots.map(user => {
@@ -173,8 +94,14 @@ module.exports = async (server) => {
         
             return [user.login, kef, betAmount, profitText];
         })
+
+        let balance = false;
+        if (userName) {
+            balance = await getBalance(io, userName, false);
+        }
+
         
-        return { arrMsgs: messages, curRes: results, curStatus: statusGame, curVal: currentValue, curCount: count, curPlayers };
+        return { arrMsgs: messages, curRes: results, curStatus: statusGame, curVal: currentValue, curCount: count, curPlayers, balance };
     }
     async function gameStart(io) {
 
@@ -271,6 +198,7 @@ module.exports = async (server) => {
 
                             let amount = Number(userInfo.a) * ((userInfo.k / 100).toFixed(2));
                             await changeBalance(userInfo.u, userInfo.c, amount);
+                            await getBalance(io, userInfo.u);
 
                             io.emit('pw', win);
                         }
@@ -303,7 +231,7 @@ module.exports = async (server) => {
                         let num = await modelGame.countDocuments() + 1;
                         currentGame.number = num;
             
-                        data = Math.trunc(currentValue);
+                        data = Math.trunc(kef);
                         io.emit('gs', data);
                         
                         statusGame = 'Results';
@@ -319,7 +247,7 @@ module.exports = async (server) => {
                         io.emit('gc', obj);
 
                         for (let user of realPlayers) {
-                            await getBalance(user.login);
+                            await getBalance(io, user.login);
                         }
 
 
@@ -394,7 +322,7 @@ module.exports = async (server) => {
     function playerBet(io, data) {
         io.emit('pb', data);
     }
-    function changeGameStatus(id, status) {
+    function changeGameStatus(io, status) {
         io.emit('cs', status);
     }
 
@@ -413,12 +341,23 @@ module.exports = async (server) => {
         }
 
     }
-    async function getBalance(login) {
+    async function getBalance(io, login, emitBalance=true) {
+
+        //console.log(`GET_BALANCE: ${login}`);
+
+        let balance = false;
+
         let user = await modelUser.findOne({ login, typeUser: 'User' }, { balance: 1 }).lean();
 
         if (user) {
-            io.sockets.in(login).emit('updateBalance', user.balance);
+
+            balance = user.balance;
+
+            if (emitBalance) {
+                io.sockets.in(login).emit('updateBalance', user.balance);
+            }
         }
+        if (!emitBalance) return balance;
     }
 
     // Для ставок реальных игроков
@@ -466,21 +405,27 @@ module.exports = async (server) => {
         return { ok: false, text: 'User is not found' };
 
     }
-    async function checkMinAmountAndMinOdds(amount, odd) {
-        let arrQuery = ['MinAmountOdds', 'MinKefOdds'];
+    async function checkMinAmountAndMinOdds(amount, currency, odd) {
+        let arrQuery = ['MinAmountOdds-ETH', 'MinAmountOdds-BTC', 'MinKefOdds'];
 
         let settings = await modelSetting.find({ name: { $in: arrQuery } }, { data: 1, name: 1 }).lean();
 
-        let setAmount = 0.1;
+        let setAmountBTC = 1;
+        let setAmountETH = 1;
+        let setAmount = 1;
         let setOdd = 1.1;
 
         for (let row of settings) {
-            if (row.name == 'MinAmountOdds') setAmount = row.data;
+            if (row.name == 'MinAmountOdds-ETH') setAmountETH = row.data;
+            if (row.name == 'MinAmountOdds-BTC') setAmountBTC = row.data;
             if (row.name == 'MinKefOdds') setOdd = row.data;
         }
 
+        setAmount = setAmountBTC;
+        if (currency == 'ETH') setAmount = setAmountETH;
+
         if (amount < setAmount) {
-            return { ok: false, text: `The minimum bet amount is ${setAmount}` };
+            return { ok: false, text: `The minimum bet amount in ${currency} is ${setAmount}` };
         }
 
         if (odd < setOdd) {
@@ -488,6 +433,24 @@ module.exports = async (server) => {
         }
 
         return { ok: true };
+    }
+    async function getMinAmountAndMinOdds() {
+        let arrQuery = ['MinAmountOdds-BTC', 'MinAmountOdds-ETH', 'MinKefOdds'];
+
+        let settings = await modelSetting.find({ name: { $in: arrQuery } }, { data: 1, name: 1 }).lean();
+
+        let minAmountBTC = 0;
+        let minAmountETH = 0;
+        let minKef = 1;
+
+        for (let row of settings) {
+            if (row.name == 'MinAmountOdds-BTC') minAmountBTC = row.data;
+            if (row.name == 'MinAmountOdds-ETH') minAmountETH = row.data;
+            if (row.name == 'MinKefOdds') minKef = row.data;
+        }
+
+        return { minAmountBTC, minAmountETH, minKef };
+
     }
 
     const io = require('socket.io')(server, { cors: { origin: '*' } } );
@@ -549,8 +512,24 @@ module.exports = async (server) => {
 
     // Sockets
     io.on('connection', async (socket) => {
-        const dateLog = new Date().toLocaleDateString('ru-RU', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
-        console.log(`[${dateLog}] - connection new user`)
+        const now = new Date();
+        const dateLog = `${now.toLocaleDateString('ru-RU')} ${now.toLocaleTimeString('ru-RU')}`;
+        console.log(`[${dateLog}] - connection new user`);
+
+        const auth = socket.handshake.auth;
+        let token;
+        let userName;
+        if (auth) token = auth.token;
+
+        if (token) {
+            let data = authenticateJWT(token);
+            if (!data.ok) {
+                socket.emit('logout');
+            } else {
+                userName = data.user.userName;
+            }
+        }
+        
     
         socket.on('getMessage', async () => {
             const messages = await getMessages();
@@ -579,7 +558,7 @@ module.exports = async (server) => {
             }
 
             // Проверяем минимум по ставке и кэфу
-            const statusBet = await checkMinAmountAndMinOdds(data.sumBet, data.kefBet);
+            const statusBet = await checkMinAmountAndMinOdds(data.sumBet, data.currencyBet, data.kefBet);
             if (!statusBet.ok) {
                 socket.emit('setBet:result', { ok: false, text: statusBet.text });
                 return;
@@ -598,7 +577,7 @@ module.exports = async (server) => {
             let isPlayerBet = realPlayers.find(row => {
                 return row.login === userLogin && row.number === numberGame
             });
-            if (isPlayerBet) {
+            if (isPlayerBet || (infoPlayers.length - realPlayers.length) > 0) {
                 if (statusGame == 'Game') {
                     numberGame = numberGame + 1;
                 } else {
@@ -613,6 +592,8 @@ module.exports = async (server) => {
             realPlayers.push({ number: numberGame, login: userLogin, currency: data.currencyBet, kef: data.kefBet * 100, amount: data.sumBet });
 
             await changeBalance(userLogin, data.currencyBet, -data.sumBet);
+            await getBalance(io, userLogin);
+            
 
             if (!statusGame || statusGame == 'Results' || statusGame == 'Pause') {
                 playerBet(io, { u: userLogin, c: data.currencyBet });
@@ -620,12 +601,44 @@ module.exports = async (server) => {
 
             socket.emit('setBet:result', { ok: true });
 
+            socket.emit('sb', userLogin);
+
             socket.join(userLogin);
 
         });
+
+        socket.on('abortBet', async (data) => {
+            const token = data.token;
+            const infoUser = authenticateJWT(token);
+            if (!infoUser.ok) {
+                socket.emit('setBet:result', { ok: false, text: infoUser.text, access: false });
+                return;
+            }
+
+            let win = { u: infoUser.user.userName, k: currentValue };
+            winPlayers.push(win);
+
+            let userInfo = sourceInfoPlayers.find(row => row.u === win.u);
+
+            let amount = Number(userInfo.a) * ((win.k / 100).toFixed(2));
+            await changeBalance(userInfo.u, userInfo.c, amount);
+            await getBalance(io, userInfo.u);
+
+            infoPlayers = infoPlayers.filter(user => user.u != infoUser.user.userName);
+
+            io.emit('pw', win);
+
+        });
+
+        socket.on('getBalance', async () => {
+            let balance = await getBalance(io, userName, false);
+            const { minAmountBTC, minAmountETH, minKef } = await getMinAmountAndMinOdds();
+            let data = { balance, minAmountBTC, minAmountETH, minKef };
+            socket.emit('getBalance', data);
+        })
     
         // То, что отправляем по умолчанию ...
-        const data = await getDataForNewConnection();
+        const data = await getDataForNewConnection(userName);
 
         socket.emit('connectionData', data);
     

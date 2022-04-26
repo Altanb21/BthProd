@@ -49,91 +49,9 @@ module.exports = async (server) => {
             num = await getCurrentKef('Bots');
         }
 
-        console.log(num);
-
         if (num) return num * 100;
 
         return generateNumber(minVal, maxVal);
-        
-
-        const listPriceCurrency = {
-            BTC: 43400,
-            ETH: 3217
-        }
-
-        if (currentGameRealPlayers.length > 0) {
-
-            let SP = 0;
-            let M = 0;
-            let DISP = 0;
-            let NO = 0;
-            let countUsers = currentGameRealPlayers.length;
-
-            console.log(`Online Players: ${countUsers}`);
-
-            let arrPX = [];
-
-            // Собрали кэфы и суммы ставок в долларах, посчитали  М - не знаю что значит
-            for (let row of currentGameRealPlayers) {
-                let currency = row.currency;
-                let amount = row.amount;
-
-                // Считаем сумму ставки в долларах
-                let p = amount * listPriceCurrency[currency];
-
-                let x = row.kef;
-
-                SP += p;
-                M += (x * p);
-
-                arrPX.push({ p, x });
-            }
-
-            M = M / SP;
-
-            // Считаем дисперсию
-            for (let row of arrPX) {
-                DISP += (row.p * Math.pow(row.x - M, 2))
-            }
-
-            DISP = DISP / SP;
-            NO = Math.sqrt(DISP);
-
-            console.log(`SP: ${SP}\nM: ${M}\nDISP: ${DISP}\nNO: ${NO}`);
-
-            if (countUsers == 1) {
-                let num = generateNumber(30, M / 2);
-                kef = M - num;
-
-                console.log(`kef = ${M} - ${num}`);
-
-            } else if (countUsers == 2) {
-
-            } else if (countUsers == 3) {
-                
-            } else if (countUsers == 4) {
-                
-            } else if (countUsers == 5) {
-                
-            } else if (countUsers == 6) {
-                
-            } else if (countUsers == 7) {
-                
-            } else if (countUsers > 7) {
-                
-            } else {
-                kef = generateNumber(minVal, maxVal);
-            }
-
-            kef = kef;
-
-        } else {
-            kef = 122;//generateNumber(minVal, maxVal);
-        }
-
-        console.log(`KEF: ${kef}\n`);
-
-        return kef;
     }
 
     async function getMessages() {
@@ -487,21 +405,27 @@ module.exports = async (server) => {
         return { ok: false, text: 'User is not found' };
 
     }
-    async function checkMinAmountAndMinOdds(amount, odd) {
-        let arrQuery = ['MinAmountOdds', 'MinKefOdds'];
+    async function checkMinAmountAndMinOdds(amount, currency, odd) {
+        let arrQuery = ['MinAmountOdds-ETH', 'MinAmountOdds-BTC', 'MinKefOdds'];
 
         let settings = await modelSetting.find({ name: { $in: arrQuery } }, { data: 1, name: 1 }).lean();
 
-        let setAmount = 0.1;
+        let setAmountBTC = 1;
+        let setAmountETH = 1;
+        let setAmount = 1;
         let setOdd = 1.1;
 
         for (let row of settings) {
-            if (row.name == 'MinAmountOdds') setAmount = row.data;
+            if (row.name == 'MinAmountOdds-ETH') setAmountETH = row.data;
+            if (row.name == 'MinAmountOdds-BTC') setAmountBTC = row.data;
             if (row.name == 'MinKefOdds') setOdd = row.data;
         }
 
+        setAmount = setAmountBTC;
+        if (currency == 'ETH') setAmount = setAmountETH;
+
         if (amount < setAmount) {
-            return { ok: false, text: `The minimum bet amount is ${setAmount}` };
+            return { ok: false, text: `The minimum bet amount in ${currency} is ${setAmount}` };
         }
 
         if (odd < setOdd) {
@@ -634,7 +558,7 @@ module.exports = async (server) => {
             }
 
             // Проверяем минимум по ставке и кэфу
-            const statusBet = await checkMinAmountAndMinOdds(data.sumBet, data.kefBet);
+            const statusBet = await checkMinAmountAndMinOdds(data.sumBet, data.currencyBet, data.kefBet);
             if (!statusBet.ok) {
                 socket.emit('setBet:result', { ok: false, text: statusBet.text });
                 return;
@@ -656,10 +580,10 @@ module.exports = async (server) => {
             if (isPlayerBet || (infoPlayers.length - realPlayers.length) > 0) {
                 if (statusGame == 'Game') {
                     numberGame = numberGame + 1;
-                } else {
+                }/*  else {
                     socket.emit('setBet:result', { ok: false, text: 'Only one bet can be placed per game' });
                     return
-                }
+                } */
             }
 
             //console.log(`-------${userLogin} : ${numberGame}`);
@@ -676,6 +600,8 @@ module.exports = async (server) => {
             }
 
             socket.emit('setBet:result', { ok: true });
+
+            socket.emit('sb', userLogin);
 
             socket.join(userLogin);
 

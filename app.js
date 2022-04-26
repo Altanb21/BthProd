@@ -69,12 +69,14 @@ async function start() {
       const users = [
         {
           login: 'Admin',
+          email: 'admin@my.ru',
           typeUser: 'Admin',
           password: passOne,
           registerDate: new Date(),
         }, 
         {
           login: 'SuperAdmin',
+          email: 's_admin@my.ru',
           typeUser: 'Admin',
           password: passTwo,
           registerDate: new Date(),

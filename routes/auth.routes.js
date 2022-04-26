@@ -41,7 +41,7 @@ router.post('/register',
           return res.status(400).json({ok: false, message: "A user with the same email already exists" })
         }
       } else {
-        email = '';
+        email = login;
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
